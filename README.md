@@ -149,7 +149,55 @@ python experiments/robot/libero/run_libero_eval_bitnet.py \
     --pretrained_checkpoint  /path/to/ft-bitvla-bitsiglipL-224px-libero_spatial-bf16 \
     --task_suite_name libero_spatial \
     --info_in_path "information you want to show in path" \
-    --model_family "bitnet" 
+    --model_family "bitnet"
+```
+
+#### Evaluating a Locally Fine-tuned Checkpoint
+
+After fine-tuning with the scripts above (e.g., `ft_bitvla_libero_spatial.sh`), the checkpoint is saved with the following structure:
+
+```
+ckpt/bitvla-bitsiglipL-224px-bf16+libero_spatial_no_noops+b16+lr-0.0001--image_aug--YOUR_RUN_ID--STEP_chkpt/
+├── action_head--STEP_checkpoint.pt
+├── proprio_projector--STEP_checkpoint.pt
+├── dataset_statistics.json
+├── tokenizer.json, tokenizer_config.json, special_tokens_map.json
+├── preprocessor_config.json, processor_config.json
+└── lora_adapter/
+    ├── model-00001-of-00002.safetensors
+    ├── model-00002-of-00002.safetensors
+    ├── model.safetensors.index.json
+    ├── config.json
+    └── ...
+```
+
+The evaluation script expects all necessary files in a single directory. To prepare the checkpoint for evaluation:
+
+```bash
+# Set your checkpoint path
+CKPT_DIR=/path/to/your/checkpoint  # e.g., ckpt/bitvla-...-10000_chkpt
+BASE_MODEL=/path/to/bitvla-bitsiglipL-224px-bf16  # base model directory
+
+# Copy required files to the lora_adapter directory
+cp $CKPT_DIR/action_head--*_checkpoint.pt $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/proprio_projector--*_checkpoint.pt $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/dataset_statistics.json $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/tokenizer*.json $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/special_tokens_map.json $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/preprocessor_config.json $CKPT_DIR/lora_adapter/
+cp $CKPT_DIR/processor_config.json $CKPT_DIR/lora_adapter/
+
+# If config.json is missing in lora_adapter, copy from base model
+cp $BASE_MODEL/config.json $CKPT_DIR/lora_adapter/
+```
+
+Then run the evaluation using the `lora_adapter` subdirectory as the checkpoint path:
+
+```bash
+python experiments/robot/libero/run_libero_eval_bitnet.py \
+    --pretrained_checkpoint /path/to/your/checkpoint/lora_adapter \
+    --task_suite_name libero_spatial \
+    --model_family "bitnet"
 ```
 
 ## Acknowledgement
